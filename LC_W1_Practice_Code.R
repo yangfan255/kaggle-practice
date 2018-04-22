@@ -174,12 +174,11 @@ boxplot(log(loan$annual_inc + 1))
 sort(table(loan$loan_status))
 round(sort(table(loan$loan_status)) / dim(loan)[1] * 100, 2)
 barplot(sort(table(loan$loan_status), decreasing = TRUE))
-# remove certain string from loan_status
-loan$loan_status <- gsub('Does not meet the credit policy. Status:',
-                         '', loan$loan_status)
+# replace or remove certain string from loan_status
+loan$loan_status <- gsub('Does not meet the credit policy. Status:', '', loan$loan_status)
+
 sort(table(loan$loan_status))
-loan$loan_status_1 <- with(loan, ifelse(loan_status %in% c('Current', 'Fully Paid', 'Issued'),
-                                        1, 0))
+loan$loan_status_1 <- with(loan, ifelse(loan_status %in% c('Current', 'Fully Paid', 'Issued'), 1, 0))
 table(loan$loan_status_1)
 
 sort(table(loan$purpose))
@@ -189,8 +188,8 @@ barplot(sort(table(loan$purpose), decreasing = TRUE))
 # 3) Numeric variable with numerical response, interest rate
 with(loan[1:10000, ], plot(log(annual_inc + 1), int_rate))
 library(corrplot)
-correlations <- cor(loan[, c('int_rate', 'total_acc', 'acc_now_delinq', 'annual_inc',
-                             'dti', 'loan_amnt')]) 
+correlations <- cor(loan[, c('int_rate', 'total_acc', 'acc_now_delinq', 'annual_inc', 'dti', 'loan_amnt')]) 
+
 # possible to see NA if features has missing value
 correlations <- cor(loan[, c('int_rate', 'total_acc', 'acc_now_delinq', 'annual_inc',
                              'dti', 'loan_amnt')], 
