@@ -94,15 +94,21 @@ which(num.value == dim(loan)[1])
 
 #loan$verification_status <- ifelse(loan$verification_status_joint != "",
 #                                   loan$verification_status_joint, loan$verification_status)
+# reduce redundant values
 summary(loan$dti_joint)
 with(subset(loan, is.na(dti_joint)), table(application_type))
 loan$dti <- ifelse(!is.na(loan$dti_joint), loan$dti_joint, loan$dti)
+sort(colnames(loan))
 loan$annual_inc <- ifelse(!is.na(loan$annual_inc_joint), loan$annual_inc_joint, loan$annual_inc)
+# make feature more reasonable and reduces feature levels
 loan$home_ownership <- ifelse(loan$home_ownership %in% c('ANY', 'NONE', 'OTHER'), 'OTHER',
                               loan$home_ownership)
+
 int_state <- by(loan, loan$addr_state, function(x) {
   return(mean(x$int_rate))
 })
+head(in_state)
+# 51 states into four groups
 loan$state_mean_int <-
   ifelse(loan$addr_state %in% names(int_state)[which(int_state <= quantile(int_state, 0.25))], 
          'low', ifelse(loan$addr_state %in% names(int_state)[which(int_state <= quantile(int_state, 0.5))],
@@ -128,16 +134,19 @@ train.ind <- sample(1:dim(loan)[1], 0.7 * dim(loan)[1])
 train <- loan[train.ind, ]
 test <- loan[-train.ind, ]
 
+# use original features for model building
 mod1 <- lm(int_rate ~ addr_state + home_ownership + annual_inc + dti +
              + term + loan_amnt + total_acc + tot_cur_bal + open_acc,
            data = train)
 summary(mod1)
 
+# use new feature "state_mean_int" for model building
 mod2 <- lm(int_rate ~ state_mean_int + home_ownership + annual_inc + dti +
              + term + loan_amnt + total_acc + tot_cur_bal + open_acc,
            data = train)
 summary(mod2)
 
+# current features still contain missing values that are discarded for modelling. Imputate with mean in each feature
 train.sub <- train[, c('int_rate', 'state_mean_int', 'home_ownership', 'annual_inc', 'dti',
                        'term', 'loan_amnt', 'total_acc', 'tot_cur_bal', 'open_acc')]
 dim(train.sub)
@@ -159,10 +168,12 @@ train.sub.scale[, c(4,5,7,8,9,10)] <- scale(train.sub.scale[, c(4,5,7,8,9,10)])
 mod3 <- lm(int_rate ~ ., data = as.data.frame(train.sub.scale))
 # standardizing won't change the significant of features, but the estimate will change.
 
-# Rows with any NA will be removed.
+{# calculate coef by hand
+# convert category feature into bool.
 train.sub.matrix <- model.matrix( ~., train.sub)
 head(train.sub.matrix)
 
+# the 2nd colume is int_rate, take it out
 x <- train.sub.matrix[, -2]
 y <- train.sub.matrix[, 2]
 # to calculate the XT*X
@@ -177,3 +188,4 @@ xtxi <- solve(t(x) %*% x)
 xtxi %*% t(x) %*% y
 # compare with model fitted coefficient
 coef(mod2)
+     }
