@@ -30,17 +30,27 @@ loanT <- loan
 
 # understand t.test
 # t.test(x, y = NULL, alternative = c("two.sided", "less", "greater"), 
+# t.test method for default
+
+## t.test(x, y = NULL,
+     alternative = c("two.sided", "less", "greater"),
+     mu = 0, paired = FALSE, var.equal = FALSE,
+     conf.level = 0.95, …) ##
+## S3 method for formula
+t.test(formula, data, subset, na.action, …)##
+
 # mu = 0, paired = FALSE, var.equal = FALSE, conf.level = 0.95, ...)
 # Welch t-test (var.equal = FALSE) and student t-test(var.equal = TRUE)
-t.test(int_rate ~ term, data = loan)
+t.test(int_rate ~ term, data = loan)  # int_rate is X, term is Y
 
-# How to calculate the stats by hand
+# calculate sta by hand. First divide data into two groups based on term length. calculate
 short_term <- subset(loan, term == ' 36 months')
 long_term <- subset(loan, term == ' 60 months')
 stderr <- sqrt(var(short_term$int_rate) / dim(short_term)[1] +
                  var(long_term$int_rate) / dim(long_term)[1])
 t.score <- (mean(short_term$int_rate) - mean(long_term$int_rate)) / stderr
 # df follows complicated formula in slide (could be approximately in t.test).
+# df comes from above t.test output
 p.val <- 2 * pt(t.score, df = 467040)
 
 # understand chi-square test
