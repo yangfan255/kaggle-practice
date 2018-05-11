@@ -1,0 +1,200 @@
+---
+title: "q1_phase1"
+author: "Fan Yang"
+date: "May 11, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+```{r}
+set.seed(100)
+dicision <- function(switch=F) {
+  doors = sample(c('car', 'goat', 'goat'), 3)
+  pick = sample(1:3, 1)
+  
+  if (switch) {doors[pick] != 'car'} else {doors[pick] == 'car'}}
+
+Not_switch = sapply(1:1000, function(i) dicision())
+Switch = sapply(1:1000, function(i) dicision(switch=T))
+boxplot(mean(Not_switch), mean(Switch), names = c("Not_switch", "Switch"), ylab="win_probability", ylim=c(0,1))
+```
+
+
+#method_3
+```{r}
+library(ggplot2)
+library(scales)
+MontyHall.Problem.Simulation <- function (noofgates, r, strategy)
+{
+  dfmontymatrix <- data.frame(matrix(0 ,ncol = 6, nrow = r))
+  cnames <- c("Gatechosen", "PrizeGate","MontySelection","Strategy", "Result", "Noofsimulations")
+  colnames(dfmontymatrix) <- cnames
+  #noofgates <- 1:3
+
+  dfmontymatrix[, "Noofsimulations"] <- r  # No of simulations.
+  for (ri in 1: r)
+  {
+    indexprize <- sample(noofgates, 1, replace = TRUE) 
+    Gatechosen <- sample(noofgates, 1, replace = TRUE)
+    
+    if(indexprize != Gatechosen)
+      {
+      MontySelection <- noofgates[-c(indexprize, Gatechosen)]
+    } else 
+      { 
+          MontySelection <- sample(noofgates[-c(indexprize, Gatechosen)], 1)
+      } 
+    
+    dfmontymatrix[ri, "Gatechosen"] <- Gatechosen
+    dfmontymatrix[ri, "PrizeGate"] <- indexprize
+    dfmontymatrix[ri, "MontySelection"] <- MontySelection
+    dfmontymatrix[ri, "Strategy"] <- sample(strategy, 1, replace = TRUE) 
+   
+    if (dfmontymatrix[ri,"Strategy"] == "stay")
+    {
+      if (dfmontymatrix[ri,"Gatechosen"] == dfmontymatrix[ri, "PrizeGate"])
+      {
+        dfmontymatrix[ri, "Result"] = "win"
+      } 
+      else 
+      {
+        dfmontymatrix[ri, "Result"] = "loss"
+      } 
+    } else
+    {
+      
+      if (dfmontymatrix[ri,"Gatechosen"] != dfmontymatrix[ri, "PrizeGate"])
+      {
+        dfmontymatrix[ri, "Result"] = "win"
+      } 
+      else 
+      {
+        dfmontymatrix[ri, "Result"] = "loss"
+      }   
+    }
+  }
+  
+  return (with (dfmontymatrix, table(Noofsimulations, Strategy, Result)))
+  
+}
+```
+
+```{r}
+library(plyr)
+library(scales)
+r <- c( 1000, 10000, 20000)
+noofgates <-1:3
+strategy <- c("stay", "switch") 
+sampledata <- lapply(r, function(r) MontyHall.Problem.Simulation(noofgates, r, strategy))
+final.output <- ldply (sampledata, data.frame)
+final.output$Noofsimulations <- as.integer(as.character(final.output$Noofsimulations))
+final.output <- mutate(final.output, 
+                       Percentage = percent(Freq/ Noofsimulations))
+
+print (final.output)
+```
+
+```{r}
+library(ggplot2)
+ggplot(final.output, aes(Result,Freq, fill = Strategy ))+
+  geom_bar( stat = "identity")+
+  geom_text(aes(label = Percentage))+
+  facet_wrap(~Noofsimulations, scales = "free" )+
+  labs(title = "Analysis of strategies involved for Monty Hall problem ", y = "No of Simulations", x = "Strategy Result")
+```
+
+
+#method_2
+```{r}
+# Simulates n games and calculates the probability of winning by switching or not switching
+sim.game <- function(n=1000){
+  prize.door <- sim.choose.door(n) # Define prize door (n times)
+  first.door <- sim.choose.door(n) # Chose first door (n times)
+  switching <- sim.choose.switching(n) # Define if will switch first door (n times)
+  won <- sim.won(prize.door, first.door, switching) # Calculates the outcome of each run
+  
+  df <- data.frame(won = won, switching = switching) # Put runs in data frame
+  
+  # Calculate probabilities from the outcomes
+  prob.win.switching <- table(df$won, df$switching)[2,2]/sum(table(df$won, df$switching)[,2])
+  prob.win.not.switching <- table(df$won, df$switching)[1,2]/sum(table(df$won, df$switching)[,1])
+  
+  return(c(prob.win.switching, prob.win.not.switching))
+}
+```
+
+```{r}
+plot.probs <- function(df, bins = 50){
+  require(ggplot2)
+  require(gridExtra)
+  
+  # Plot for Switching
+  bw <- (max(df$prob.win.switching) - min(df$prob.win.switching))/(bins - 1)
+  h1 <- ggplot(df, aes(prob.win.switching)) + geom_histogram(binwidth = bw) + 
+    ggtitle('Switching') + xlab('Probability of Winning') + ylab('Frequency') + 
+    geom_vline(xintercept = mean(df$prob.win.switching), colour='red') + 
+    scale_x_continuous(breaks = c(0.20,0.30,0.40,0.50,0.60,0.80, round(mean(df$prob.win.switching),3)), limits=c(0.20, 0.80))
+  
+  # Plot for NOT Switching
+  bw <- (max(df$prob.win.not.switching) - min(df$prob.win.not.switching))/(bins - 1)
+  h2 <- ggplot(df, aes(prob.win.not.switching)) + geom_histogram(binwidth = bw) + 
+    ggtitle('NOT Switching') + xlab('Probability of Winning') + ylab('Frequency') + 
+    geom_vline(xintercept = mean(df$prob.win.not.switching), colour='red') +
+    scale_x_continuous(breaks = c(0.20,0.40,0.50,0.60,0.70,0.80, round(mean(df$prob.win.not.switching),3)), limits=c(0.20, 0.80))
+  
+  grid.arrange(h1, h2, nrow = 2, top="Distributions of Probability of Winning")
+}
+```
+
+```{r}
+# Executes, repeated times, n runs of Monty Hall problem, also showing plot and descriptive results
+dist.game <- function(reps=300, n=100){
+  # Minimum n is 100
+  if(n < 100){
+    n <- 100
+  }
+  # Minimum reps is 300
+  if(reps < 300){
+    reps <- 300
+  }
+  
+  dist <- data.frame(prob.win.switching = rep(0, times = reps),
+                     prob.win.not.switching = rep(0, times = reps))
+  
+  # Repeating, "reps" times, "n" runs of Monty Hall problem 
+  for(i in 1:reps){
+    dist[i, ] <- sim.game(n)
+  }
+  
+  # Plots distributions
+  plot.probs(dist)
+  
+  # Returns descriptive results
+  return(cat("<br/><br/>
+                  <li>Mean of Probability of Winnning by Switching: <span style='color:red'>", 
+                 round(mean(dist$prob.win.switching), 3), "</span></li>",
+                 "<li>Std of Probability of Winnning by Switching: <span style='color:red'>", 
+                 round(sqrt(var(dist$prob.win.switching)), 3), "</span></li>",
+                 "<li>Var. of Probability of Winnning by Switching: <span style='color:red'>", 
+                 round(var(dist$prob.win.switching), 5), "</span></li><br/>",
+             
+                 "<li>Mean of Probability of Winnning by NOT Switching: <span style='color:red'>", 
+                 round(mean(dist$prob.win.not.switching), 3), "</span></li>",
+                 "<li>Std of Probability of Winnning by NOT Switching: <span style='color:red'>", 
+                 round(sqrt(var(dist$prob.win.not.switching)), 3), "</span></li>",
+                 "<li>Var. of Probability of Winnning by NOT Switching: <span style='color:red'>", 
+                 round(var(dist$prob.win.not.switching), 5), "</span><br/>", sep=""))
+}
+  
+```
+
+```{r}
+dist.game(1000, 1000)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
